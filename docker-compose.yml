@@ -1,0 +1,18 @@
+version: '2'
+services:
+  blog:
+    image: erwinsteffens/blog:latest
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.frontend.rule=Host:erwinsteffens.nl,erwinsteffens.com"
+  traefik:
+    image: traefik:v1.1.1-alpine
+    restart: always
+    command: --docker --logLevel=DEBUG
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/share/traefik:/etc/traefik
