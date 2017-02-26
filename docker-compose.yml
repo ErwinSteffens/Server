@@ -34,7 +34,7 @@ services:
     image: erwinsteffens/darksky-influxdb:latest
     restart: always
     environment: 
-      CRON: '* */10 * * * *' 
+      CRON: '*/10 * * * *' 
       DARKSKY_KEY: ${DARKSKY_KEY}
       DARKSKY_UNITS: auto
       DARKSKY_LATITUDE: 52.662039
