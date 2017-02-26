@@ -2,7 +2,7 @@ var gulp = require('gulp');
 var rsync = require('gulp-rsync');
 
 var paths = {
-  configs: ['traefik/**/*'],
+  configs: ['traefik/**/*', 'influxdb/**/*'],
   compose: 'docker-compose.yml'
 };
 

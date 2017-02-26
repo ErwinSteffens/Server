@@ -4,15 +4,52 @@ services:
     image: erwinsteffens/blog:latest
     restart: always
     labels:
-      - "traefik.enable=true"
-      - "traefik.frontend.rule=Host:erwinsteffens.nl,erwinsteffens.com"
+    - "traefik.enable=true"
+    - "traefik.frontend.rule=Host:erwinsteffens.nl,erwinsteffens.com"
+  influxdb:
+    image: influxdb:1.0-alpine
+    restart: always
+    ports: 
+    - "8086:8086"
+    - "8083:8083"
+    volumes:
+    - "/usr/share/influxdb:/var/lib/influxdb"
+    environment: 
+      INFLUXDB_CONFIG_PATH: /var/lib/influxdb/influxdb.conf
+    labels:
+    - "traefik.enable=true"
+    - "traefik.port=8083"
+    - "traefik.frontend.rule=Host:influxdb.erwinsteffens.com"
+  grafana:
+    image: grafana/grafana:4.0.2
+    restart: always
+    environment: 
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
+    labels:
+    - "traefik.enable=true"
+    - "traefik.frontend.rule=Host:grafana.erwinsteffens.com"
+    volumes: 
+    - "/usr/share/grafana:/var/lib/grafana"
+  darksky-influxdb:
+    image: erwinsteffens/darksky-influxdb:latest
+    restart: always
+    environment: 
+      CRON: '* */10 * * * *' 
+      DARKSKY_KEY: ${DARKSKY_KEY}
+      DARKSKY_UNITS: auto
+      DARKSKY_LATITUDE: 52.662039
+      DARKSKY_LONGITUDE: 6.890839
+      INFLUXDB_HOST: influxdb
+      INFLUXDB_DATABASE: home
+      INFLUXDB_USERNAME: ${INFLUXDB_DARKSKY_USERNAME}
+      INFLUXDB_PASSWORD: ${INFLUXDB_DARKSKY_PASSWORD}
   traefik:
     image: traefik:v1.1.1-alpine
     restart: always
     command: --docker --logLevel=DEBUG
     ports:
-      - "80:80"
-      - "443:443"
+    - "80:80"
+    - "443:443"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /usr/share/traefik:/etc/traefik
+    - /var/run/docker.sock:/var/run/docker.sock
+    - /usr/share/traefik:/etc/traefik
