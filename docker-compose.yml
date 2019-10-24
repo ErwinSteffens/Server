@@ -1,40 +1,69 @@
-version: '2'
+version: "2.2"
 services:
-  blog:
-    image: erwinsteffens/blog:latest
-    restart: always
-    labels:
-    - "traefik.enable=true"
-    - "traefik.frontend.rule=Host:erwinsteffens.nl,erwinsteffens.com"
   influxdb:
-    image: influxdb:1.0-alpine
+    image: influxdb:1.7-alpine
     restart: always
-    ports: 
-    - "8086:8086"
-    - "8083:8083"
+    ports:
+      - "8086:8086"
+      - "8083:8083"
     volumes:
-    - "/usr/share/influxdb:/var/lib/influxdb"
-    environment: 
+      - /usr/share/influxdb:/var/lib/influxdb
+    environment:
       INFLUXDB_CONFIG_PATH: /var/lib/influxdb/influxdb.conf
     labels:
-    - "traefik.enable=true"
-    - "traefik.port=8083"
-    - "traefik.frontend.rule=Host:influxdb.erwinsteffens.com"
-  grafana:
-    image: grafana/grafana:4.0.2
+      - "traefik.enable=true"
+      - "traefik.port=8083"
+      - "traefik.frontend.rule=Host:influxdb.erwinsteffens.com"
+
+  mongo:
+    image: mongo:3.4
     restart: always
-    environment: 
-      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
+    volumes:
+      - /usr/share/mongo:/data/db
+
+  unifi:
+    image: jacobalberty/unifi:latest
+    depends_on:
+      - mongo
+    init: true
+    restart: always
+    volumes:
+      - /usr/share/unifi/data:/unifi/data
+      - /usr/share/unifi/log:/unifi/log
+      - /usr/share/unifi/cert:/unifi/cert
+      - /usr/share/unifi/init:/unifi/init.d
+    environment:
+      DB_URI: mongodb://mongo/unifi
+      STATDB_URI: mongodb://mongo/unifi_stat
+      DB_NAME: unifi
+    ports:
+      - "6789:6789/tcp" # Speed test
+      - "8080:8080/tcp" # Device/controller comm.
+      - "8443:8443/tcp" # Controller GUI/API as seen in a web browser
+      - "8880:8880/tcp" # HTTP portal redirection
+      - "8843:8843/tcp" # HTTPS portal redirection
     labels:
-    - "traefik.enable=true"
-    - "traefik.frontend.rule=Host:grafana.erwinsteffens.com"
-    volumes: 
-    - "/usr/share/grafana:/var/lib/grafana"
+      - "traefik.enable=true"
+      - "traefik.frontend.passHostHeader=true"
+      - "traefik.admin.backend=unifi"
+      - "traefik.admin.frontend.rule=Host:unifi.erwinsteffens.com"
+      - "traefik.admin.port=8443"
+      - "traefik.admin.protocol=https"
+      - "traefik.frontend.headers.SSLRedirect=true"
+      - "traefik.frontend.headers.STSSeconds=315360000"
+      - "traefik.frontend.headers.browserXSSFilter=true"
+      - "traefik.frontend.headers.contentTypeNosniff=true"
+      - "traefik.frontend.headers.forceSTSHeader=true"
+      - "traefik.frontend.headers.SSLHost=example.com"
+      - "traefik.frontend.headers.STSIncludeSubdomains=true"
+      - "traefik.frontend.headers.STSPreload=true"
+      - "traefik.frontend.headers.frameDeny=true"
+
   darksky-influxdb:
     image: erwinsteffens/darksky-influxdb:latest
     restart: always
-    environment: 
-      CRON: '*/10 * * * *' 
+    environment:
+      CRON: "*/10 * * * *"
       DARKSKY_KEY: ${DARKSKY_KEY}
       DARKSKY_UNITS: auto
       DARKSKY_LATITUDE: 52.662039
@@ -43,13 +72,35 @@ services:
       INFLUXDB_DATABASE: home
       INFLUXDB_USERNAME: ${INFLUXDB_DARKSKY_USERNAME}
       INFLUXDB_PASSWORD: ${INFLUXDB_DARKSKY_PASSWORD}
+
+  grafana:
+    image: grafana/grafana:6.4.3
+    restart: always
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.frontend.rule=Host:grafana.erwinsteffens.com"
+    volumes:
+      - /usr/share/grafana/conf:/etc/grafana
+      - /usr/share/grafana/data:/var/lib/grafana
+      - /usr/share/grafana/log:/var/log/grafana
+
+  blog:
+    image: erwinsteffens/blog:latest
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.frontend.rule=Host:erwinsteffens.nl,erwinsteffens.com"
+
   traefik:
-    image: traefik:v1.1.1-alpine
+    image: traefik:v1.7-alpine
     restart: always
     command: --docker --logLevel=DEBUG
     ports:
-    - "80:80"
-    - "443:443"
+      - "80:80"
+      - "443:443"
+      - "8888:8888"
     volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    - /usr/share/traefik:/etc/traefik
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/share/traefik:/etc/traefik

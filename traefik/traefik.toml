@@ -1,5 +1,7 @@
 defaultEntryPoints = ["http", "https"]
 
+insecureSkipVerify = true
+
 [entryPoints]
   [entryPoints.http]
     address = ":80"
@@ -19,6 +21,8 @@ email = "erwinsteffens@gmail.nl"
 storage = "/etc/traefik/acme/acme.json"
 entryPoint = "https"
 onDemand = true
+[acme.httpChallenge]
+  entryPoint = "http"
 
 [[acme.domains]]
   main = "erwinsteffens.com"
